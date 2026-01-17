@@ -19,15 +19,37 @@ search_query = st.sidebar.text_input("Enter Topic", "Cyberpunk")
 # 2. DAILY TRENDS (Hamesha dikhne wali table)
 st.subheader("🔥 Adobe Stock: Daily Global Trends List")
 @st.cache_data(ttl=3600)
-def get_daily_trends():
-    backup = [
-        {"Trend Rank": 1, "Topic": "AI Abstract Backgrounds", "Status": "🔥 Hot"},
-        {"Trend Rank": 2, "Topic": "Sustainability", "Status": "📈 Growing"},
-        {"Trend Rank": 3, "Topic": "3D Characters", "Status": "🔥 Hot"},
-        {"Trend Rank": 4, "Topic": "Mental Health Awareness", "Status": "📈 Growing"},
-        {"Trend Rank": 5, "Topic": "Cyberpunk Art", "Status": "🔥 Hot"}
-    ]
-    return pd.DataFrame(backup)
+# --- Is line ko dhoond kar iske neechay ye paste karein ---
+st.subheader(f"💰 Top Downloads for '{search_query}'")
+
+def get_live_selling(kw):
+    data = []
+    headers = {"User-Agent": "Mozilla/5.0"}
+    # Teeno categories (Photo, Video, Vector) ko cover karega
+    types = {"Photos": "images", "Videos": "video", "Vectors": "vectors"}
+    for name, t in types.items():
+        url = f"https://stock.adobe.com/search/{t}?k={kw.replace(' ', '+')}&order=relevance"
+        try:
+            r = requests.get(url, headers=headers, timeout=5)
+            soup = BeautifulSoup(r.text, 'html.parser')
+            # Naya logic: Ab ye direct links nikalay ga
+            items = soup.select('a.js-search-result-link')[:2] 
+            for item in items:
+                asset_url = "https://stock.adobe.com" + item['href']
+                img_tag = item.find('img')
+                title = img_tag['alt'] if img_tag else "View Asset"
+                data.append({"Category": name, "Title": title, "Link": asset_url})
+        except: continue
+    return pd.DataFrame(data)
+
+# Table dikhane ka tareeqa jo links ko clickable banaye ga
+df_links = get_live_selling(search_query)
+if not df_links.empty:
+    st.dataframe(
+        df_links, 
+        use_container_width=True,
+        column_config={"Link": st.column_config.LinkColumn("View on Adobe")}
+    )
 
 st.table(get_daily_trends())
 
@@ -69,3 +91,4 @@ try:
         st.plotly_chart(fig, use_container_width=True)
 except:
     st.warning("Google is resting. Charts will auto-load in 5 minutes.")
+
