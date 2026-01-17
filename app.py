@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-from pytrends.request import TrendReq
+from pytrends = TrendReq(hl='en-US', tz=360, timeout=(10,25), retries=2, backoff_factor=0.1)
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
@@ -84,3 +84,4 @@ try:
         st.plotly_chart(fig_pie, use_container_width=True)
 except:
     st.info("Market data load ho raha hai... aglay refresh ka intezar karein.")
+
