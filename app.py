@@ -38,13 +38,14 @@ st.subheader(f"💰 Top Downloads for '{search_query}'")
 def get_live_selling(kw):
     data = []
     headers = {"User-Agent": "Mozilla/5.0"}
+    # Teeno categories scan karega
     types = {"Photos": "images", "Videos": "video", "Vectors": "vectors"}
     for name, t in types.items():
         url = f"https://stock.adobe.com/search/{t}?k={kw.replace(' ', '+')}&order=relevance"
         try:
             r = requests.get(url, headers=headers, timeout=5)
             soup = BeautifulSoup(r.text, 'html.parser')
-            # Scrape direct asset links
+            # Scrape direct asset links and titles
             items = soup.select('a.js-search-result-link')[:2]
             for item in items:
                 asset_url = "https://stock.adobe.com" + item['href']
@@ -54,6 +55,7 @@ def get_live_selling(kw):
         except: continue
     return pd.DataFrame(data)
 
+# Table display with clickable links
 df_links = get_live_selling(search_query)
 if not df_links.empty:
     st.dataframe(
@@ -62,7 +64,7 @@ if not df_links.empty:
         column_config={"Link": st.column_config.LinkColumn("View on Adobe")}
     )
 
-# --- 4. MARKET CHARTS (Google Trends) ---
+# --- 4. MARKET CHARTS ---
 st.markdown("---")
 try:
     pytrends = TrendReq(hl='en-US', tz=360, retries=5)
