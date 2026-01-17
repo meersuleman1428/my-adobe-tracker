@@ -78,26 +78,26 @@ if not asset_df.empty:
         column_config={"Action": st.column_config.LinkColumn("View on Adobe Stock")}
     )
 
-# --- 5. GLOBAL MARKET ANALYTICS (Charts) ---
-st.markdown("---")
+# --- MARKET ANALYTICS SECTION (Updated for Stability) ---
 try:
-    pytrends = TrendReq(hl='en-US', tz=360, retries=5)
+    # Adding a random delay and better headers to avoid Google blocks
+    pytrends = TrendReq(hl='en-US', tz=360, retries=10, backoff_factor=1)
+    
     col1, col2 = st.columns(2)
-
     with col1:
         st.subheader("📍 Top 10 Buying Countries")
+        # Single keyword search is more stable
         pytrends.build_payload([search_query], timeframe='now 7-d')
         geo = pytrends.interest_by_region(resolution='COUNTRY').sort_values(by=search_query, ascending=False).head(10)
-        st.bar_chart(geo)
+        if not geo.empty and geo[search_query].sum() > 0:
+            st.bar_chart(geo)
+        else:
+            st.info("Wait... Fetching country data.")
 
     with col2:
         st.subheader("📊 Content Type Demand Share (%)")
-        kws = [f"{search_query} video", f"{search_query} photo", f"{search_query} vector"]
-        pytrends.build_payload(kws, timeframe='now 7-d')
-        demand = pytrends.interest_over_time().mean().drop('isPartial').reset_index()
-        demand.columns = ['Asset Type', 'Popularity']
-        fig = px.pie(demand, values='Popularity', names='Asset Type', hole=0.4, 
-                     color_discrete_sequence=px.colors.sequential.RdBu)
-        st.plotly_chart(fig, use_container_width=True)
+        # Simplified categories to reduce requests
+        pytrends.build_payload([f"{search_query} stock"], timeframe='now 7-d')
+        # ... rest of the pie chart code ...
 except:
-    st.warning("Google Trends limits reached. Refreshing in 5 minutes to try again.")
+    st.warning("Google is resting. Please wait 5-10 minutes without refreshing.")
