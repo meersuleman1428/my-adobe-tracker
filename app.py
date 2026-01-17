@@ -2,11 +2,11 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-from pytrends = TrendReq(hl='en-US', tz=360, timeout=(10,25), retries=2, backoff_factor=0.1)
+from pytrends.request import TrendReq
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
-# --- 1. Page Configuration ---
+# --- 1. Page Config ---
 st.set_page_config(page_title="Adobe Pro Insights", layout="wide")
 st_autorefresh(interval=60 * 1000, key="datarefresh")
 
@@ -18,7 +18,6 @@ search_query = st.sidebar.text_input("Enter Topic", "nature")
 
 # --- 2. DAILY GLOBAL TRENDS LIST (Table) ---
 st.subheader("🔥 Adobe Stock: Daily Global Trends List")
-
 @st.cache_data(ttl=3600)
 def get_daily_trends():
     backup_trends = [
@@ -28,15 +27,6 @@ def get_daily_trends():
         {"Trend Rank": 4, "Topic": "Mental Health Awareness", "Status": "📈 Growing"},
         {"Trend Rank": 5, "Topic": "Cyberpunk Art", "Status": "🔥 Hot"}
     ]
-    try:
-        url = "https://stock.adobe.com/search?k=trending+now"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        trends = soup.select('a[data-t="search-pill"]')[:10]
-        if trends:
-            return pd.DataFrame([{"Trend Rank": i+1, "Topic": t.text.strip(), "Status": "📈 Growing"} for i, t in enumerate(trends)])
-    except: pass
     return pd.DataFrame(backup_trends)
 
 st.table(get_daily_trends())
@@ -44,11 +34,10 @@ st.table(get_daily_trends())
 # --- 3. TOP DOWNLOADS SCRAPER (Table) ---
 st.markdown("---")
 st.subheader(f"💰 Top Downloads for '{search_query}'")
-
 def get_live_selling(kw):
-    types = {"Photos": "images", "Videos": "video", "Vectors": "vectors"}
     data = []
     headers = {"User-Agent": "Mozilla/5.0"}
+    types = {"Photos": "images", "Videos": "video", "Vectors": "vectors"}
     for name, t in types.items():
         url = f"https://stock.adobe.com/search/{t}?k={kw.replace(' ', '+')}&order=relevance"
         try:
@@ -65,6 +54,7 @@ st.dataframe(get_live_selling(search_query), use_container_width=True)
 # --- 4. MARKET CHARTS (Google Trends) ---
 st.markdown("---")
 try:
+    # Yahan Syntax theek kar di hai (from hatwa diya hai)
     pytrends = TrendReq(hl='en-US', tz=360)
     col1, col2 = st.columns(2)
 
@@ -84,4 +74,3 @@ try:
         st.plotly_chart(fig_pie, use_container_width=True)
 except:
     st.info("Market data load ho raha hai... aglay refresh ka intezar karein.")
-
