@@ -5,19 +5,17 @@ import pandas as pd
 from pytrends.request import TrendReq
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
-import time
 
-# --- 1. Page Configuration ---
+# --- 1. Page Config ---
 st.set_page_config(page_title="Adobe Pro Insights", layout="wide")
-st_autorefresh(interval=60 * 1000, key="datarefresh")
+st_autorefresh(interval=120 * 1000, key="datarefresh") # Refresh time 2 min kar diya taake block na ho
 
 st.title("🚀 Adobe Stock Live Market & Daily Trends")
 st.write(f"🕒 Last Sync: {pd.Timestamp.now().strftime('%H:%M:%S')}")
 
-# Sidebar
 search_query = st.sidebar.text_input("Enter Topic", "nature")
 
-# --- 2. DAILY GLOBAL TRENDS LIST ---
+# --- 2. DAILY TRENDS TABLE ---
 st.subheader("🔥 Adobe Stock: Daily Global Trends List")
 @st.cache_data(ttl=3600)
 def get_daily_trends():
@@ -38,37 +36,28 @@ st.subheader(f"💰 Top Downloads for '{search_query}'")
 def get_live_selling(kw):
     data = []
     headers = {"User-Agent": "Mozilla/5.0"}
-    types = {"Photos": "images", "Videos": "video", "Vectors": "vectors"}
-    for name, t in types.items():
-        url = f"https://stock.adobe.com/search/{t}?k={kw.replace(' ', '+')}&order=relevance"
-        try:
-            r = requests.get(url, headers=headers, timeout=5)
-            soup = BeautifulSoup(r.text, 'html.parser')
-            items = soup.find_all('img', alt=True)[:2]
-            for item in items:
-                data.append({"Category": name, "Popular Asset Title": item['alt']})
-        except: continue
-    return pd.DataFrame(data)
+    try:
+        url = f"https://stock.adobe.com/search?k={kw.replace(' ', '+')}&order=relevance"
+        r = requests.get(url, headers=headers, timeout=5)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        items = soup.find_all('img', alt=True)[:4]
+        for item in items:
+            data.append({"Popular Asset Title": item['alt']})
+        return pd.DataFrame(data)
+    except: return pd.DataFrame([{"Popular Asset Title": "Loading live titles..."}])
 
 st.dataframe(get_live_selling(search_query), use_container_width=True)
 
-# --- 4. MARKET CHARTS (With Retry Logic) ---
+# --- 4. MARKET CHARTS ---
 st.markdown("---")
-col1, col2 = st.columns(2)
-
 try:
-    # Adding more robust connection settings
-    pytrends = TrendReq(hl='en-US', tz=360, timeout=(10,25), retries=3, backoff_factor=0.5)
-    
+    pytrends = TrendReq(hl='en-US', tz=360) # Fixed Syntax Error
+    col1, col2 = st.columns(2)
     with col1:
         st.subheader("📍 Top Buying Countries")
         pytrends.build_payload([search_query], timeframe='now 7-d')
         geo = pytrends.interest_by_region(resolution='COUNTRY').sort_values(by=search_query, ascending=False).head(10)
-        if not geo.empty and geo[search_query].sum() > 0:
-            st.bar_chart(geo)
-        else:
-            st.info("Searching for country-wise interest... please wait.")
-
+        st.bar_chart(geo)
     with col2:
         st.subheader("📊 Category Demand Share")
         kws = [f"{search_query} video", f"{search_query} photo", f"{search_query} vector"]
@@ -78,4 +67,4 @@ try:
         fig = px.pie(demand, values='Popularity', names='Type', hole=0.4)
         st.plotly_chart(fig, use_container_width=True)
 except:
-    st.warning("Google Trends limits reached. Refreshing in 60 seconds to try again.")
+    st.warning("Google Trends limit reached. Refreshing in 2 minutes...")
